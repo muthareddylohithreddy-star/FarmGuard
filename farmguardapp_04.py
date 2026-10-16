@@ -65,7 +65,6 @@ def fetch_live_data(city_name):
     except:
         soil_data = {"N": 80.0, "P": 40.0, "K": 40.0, "ph": 6.5}
         
-    # NEW: Forces exact Indian Standard Time (IST) conversion
     ist_time = datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)
     
     return {
@@ -73,6 +72,50 @@ def fetch_live_data(city_name):
         "weather": weather_data,
         "soil": soil_data
     }
+
+# --- NEW: AI DYNAMIC CROP SUGGESTION ENGINE ---
+def get_crop_suggestion(soil, weather, lang):
+    N, P, K = soil['N'], soil['P'], soil['K']
+    temp = weather['temp']
+    
+    # Calculate highest nutrient relative to a standard baseline (80-40-40)
+    n_ratio = N / 80.0; p_ratio = P / 40.0; k_ratio = K / 40.0
+    best = 'N'
+    if p_ratio > n_ratio and p_ratio > k_ratio: best = 'P'
+    elif k_ratio > n_ratio and k_ratio > p_ratio: best = 'K'
+    
+    EN = {
+        "N": f"With a live temperature of {temp}°C, your soil shows very high Nitrogen ({N} mg/kg). Nitrogen fuels rapid green foliage and stem development. **AI Recommendation:** Cultivate heavy feeders like **Rice, Maize, or Leafy Greens**, which will thrive and produce massive yields here.",
+        "P": f"With a live temperature of {temp}°C, your soil shows excellent Phosphorus ({P} mg/kg). Phosphorus is critical for deep, robust root systems and early vigor. **AI Recommendation:** Cultivate **Legumes, Groundnuts, or Root Vegetables**, which will anchor deeply and grow exceptionally well.",
+        "K": f"With a live temperature of {temp}°C, your soil features high Potassium ({K} mg/kg). Potassium builds disease resistance and is essential for heavy fruit filling. **AI Recommendation:** Cultivate cash crops like **Banana, Mango, or Cotton**, which will yield high-quality produce."
+    }
+    TE = {
+        "N": f"ప్రస్తుతం {temp}°C ఉష్ణోగ్రత ఉన్న ఈ సమయంలో, మీ నేలలో నత్రజని ({N} mg/kg) చాలా ఎక్కువగా ఉంది. నత్రజని ఆకుపచ్చని పెరుగుదలకు తోడ్పడుతుంది. **AI సూచన:** ఈ నేలలో **వరి, మొక్కజొన్న లేదా ఆకుకూరలు** పండించడం ఉత్తమం. ఇవి వేగంగా పెరిగి అధిక దిగుబడిని ఇస్తాయి.",
+        "P": f"ప్రస్తుతం {temp}°C ఉష్ణోగ్రత ఉన్న ఈ సమయంలో, మీ నేలలో భాస్వరం ({P} mg/kg) అద్భుతంగా ఉంది. వేరు వ్యవస్థ బలంగా ఉండటానికి ఇది కీలకం. **AI సూచన:** ఈ నేలలో **పప్పుధాన్యాలు లేదా వేరుశెనగ** పండించడం ద్వారా మంచి దిగుబడి సాధించవచ్చు.",
+        "K": f"ప్రస్తుతం {temp}°C ఉష్ణోగ్రత ఉన్న ఈ సమయంలో, మీ నేలలో పొటాషియం ({K} mg/kg) ఎక్కువగా ఉంది. ఇది రోగనిరోధక శక్తిని పెంచి కాయలు బరువుగా ఎదగడానికి సహాయపడుతుంది. **AI సూచన:** ఈ నేలలో **అరటి, మామిడి లేదా పత్తి** పండించడం ఉత్తమం."
+    }
+    HI = {
+        "N": f"{temp}°C तापमान के साथ, आपकी मिट्टी में नाइट्रोजन ({N} mg/kg) बहुत अधिक है। यह पौधों की तेजी से हरी वृद्धि को बढ़ावा देता है। **AI सुझाव:** इस मिट्टी में **चावल, मक्का या पत्तेदार सब्जियां** उगाने से सबसे अच्छी और अधिक उपज मिलेगी।",
+        "P": f"{temp}°C तापमान के साथ, आपकी मिट्टी में फास्फोरस ({P} mg/kg) उत्कृष्ट है। यह मजबूत जड़ प्रणाली के लिए महत्वपूर्ण है। **AI सुझाव:** इस मिट्टी में **फलियां या मूंगफली** उगाने से फसल गहरी और मजबूत होगी।",
+        "K": f"{temp}°C तापमान के साथ, आपकी मिट्टी में पोटेशियम ({K} mg/kg) उच्च है। यह बीमारी से बचाता है और फलों के विकास में मदद करता है। **AI सुझाव:** इस मिट्टी में **केला, आम या कपास** जैसी फसलें उगाना सबसे अच्छा रहेगा।"
+    }
+    TA = {
+        "N": f"{temp}°C வெப்பநிலையுடன், உங்கள் மண்ணில் நைட்ரஜன் ({N} mg/kg) மிக அதிகமாக உள்ளது. இது விரைவான பச்சை வளர்ச்சிக்கு உதவுகிறது. **AI பரிந்துரை:** இந்த மண்ணில் **நெல், மக்காச்சோளம் அல்லது இலை காய்கறிகளை** பயிரிடுவது சிறந்த விளைச்சலைத் தரும்.",
+        "P": f"{temp}°C வெப்பநிலையுடன், உங்கள் மண்ணில் பாஸ்பரஸ் ({P} mg/kg) சிறப்பாக உள்ளது. வலுவான வேர் அமைப்புக்கு இது முக்கியம். **AI பரிந்துரை:** இந்த மண்ணில் **பருப்பு வகைகள் அல்லது வேர்க்கடலையை** பயிரிடுவது மிகவும் நல்லது.",
+        "K": f"{temp}°C வெப்பநிலையுடன், உங்கள் மண்ணில் பொட்டாசியம் ({K} mg/kg) அதிகமாக உள்ளது. இது நோயெதிர்ப்பு சக்தியை அதிகரித்து பழங்களை வலுவாக்குகிறது. **AI பரிந்துரை:** இந்த மண்ணில் **வாழை, மாம்பழம் அல்லது பருத்தி** பயிரிடுவது சிறந்தது."
+    }
+    KN = {
+        "N": f"{temp}°C ತಾಪಮಾನದೊಂದಿಗೆ, ನಿಮ್ಮ ಮಣ್ಣಿನಲ್ಲಿ ಸಾರಜನಕ ({N} mg/kg) ತುಂಬಾ ಹೆಚ್ಚಾಗಿದೆ. ಇದು ಸಸ್ಯಗಳ ಹಸಿರು ಬೆಳವಣಿಗೆಗೆ ಸಹಾಯ ಮಾಡುತ್ತದೆ. **AI ಸಲಹೆ:** ಈ ಮಣ್ಣಿನಲ್ಲಿ **ಭತ್ತ, ಮೆಕ್ಕೆಜೋಳ ಅಥವಾ ಸೊಪ್ಪುಗಳನ್ನು** ಬೆಳೆಸುವುದು ಉತ್ತಮ ಇಳುವರಿಯನ್ನು ನೀಡುತ್ತದೆ.",
+        "P": f"{temp}°C ತಾಪಮಾನದೊಂದಿಗೆ, ನಿಮ್ಮ ಮಣ್ಣಿನಲ್ಲಿ ರಂಜಕ ({P} mg/kg) ಅತ್ಯುತ್ತಮವಾಗಿದೆ. ಇದು ಬಲವಾದ ಬೇರಿನ ವ್ಯವಸ್ಥೆಗೆ ಮುಖ್ಯವಾಗಿದೆ. **AI ಸಲಹೆ:** ಈ ಮಣ್ಣಿನಲ್ಲಿ **ದ್ವಿದಳ ಧಾನ್ಯಗಳು ಅಥವಾ ಕಡಲೆಕಾಯಿ** ಬೆಳೆಸುವುದು ಅತ್ಯುತ್ತಮ.",
+        "K": f"{temp}°C ತಾಪಮಾನದೊಂದಿಗೆ, ನಿಮ್ಮ ಮಣ್ಣಿನಲ್ಲಿ ಪೊಟ್ಯಾಸಿಯಮ್ ({K} mg/kg) ಹೆಚ್ಚಾಗಿದೆ. ಇದು ರೋಗ ನಿರೋಧಕ ಶಕ್ತಿಯನ್ನು ಹೆಚ್ಚಿಸುತ್ತದೆ. **AI ಸಲಹೆ:** ಈ ಮಣ್ಣಿನಲ್ಲಿ **ಬಾಳೆ, ಮಾವು ಅಥವಾ ಹತ್ತಿ** ಬೆಳೆಸುವುದು ಉತ್ತಮ."
+    }
+    ML = {
+        "N": f"{temp}°C താപനിലയിൽ, നിങ്ങളുടെ മണ്ണിൽ നൈട്രജന്റെ ({N} mg/kg) അളവ് വളരെ കൂടുതലാണ്. ഇത് ചെടിയുടെ പച്ച വളർച്ചയെ സഹായിക്കുന്നു. **AI നിർദ്ദേശം:** ഈ മണ്ണിൽ **നെല്ല്, ചോളം അല്ലെങ്കിൽ ഇലക്കറികൾ** കൃഷി ചെയ്യുന്നത് മികച്ച വിളവ് നൽകും.",
+        "P": f"{temp}°C താപനിലയിൽ, നിങ്ങളുടെ മണ്ണിൽ ഫോസ്ഫറസ് ({P} mg/kg) മികച്ചതാണ്. വേരുകൾക്ക് ഇത് വളരെ പ്രധാനമാണ്. **AI നിർദ്ദേശം:** ഈ മണ്ണിൽ **പയർവർഗ്ഗങ്ങൾ അല്ലെങ്കിൽ നിലക്കടല** കൃഷി ചെയ്യുന്നത് വളരെ നല്ലതാണ്.",
+        "K": f"{temp}°C താപനിലയിൽ, നിങ്ങളുടെ മണ്ണിൽ പൊട്ടാസ്യം ({K} mg/kg) കൂടുതലാണ്. ഇത് രോഗപ്രതിരോധ ശേഷി വർദ്ധിപ്പിക്കുന്നു. **AI നിർദ്ദേശം:** ഈ മണ്ണിൽ **വാഴ, മാമ്പഴം അല്ലെങ്കിൽ പരുത്തി** കൃഷി ചെയ്യുന്നത് മികച്ചതാണ്."
+    }
+    lang_map = {"English": EN, "తెలుగు": TE, "हिंदी": HI, "தமிழ்": TA, "ಕನ್ನಡ": KN, "മലയാളം": ML}
+    return lang_map.get(lang, EN)[best]
 
 # --- 6-LANGUAGE UI TRANSLATIONS ---
 TRANSLATIONS = {
@@ -84,8 +127,12 @@ TRANSLATIONS = {
     "മലയാളം": {"title": "🌾 അഗ്രി-സെന്റിനൽ OS", "subtitle": "കൃത്യമായ കൃഷി", "intake_header": "കാർഷിക പ്രൊഫൈൽ", "farmer_name": "കർഷകന്റെ പേര്", "location": "നഗരം", "crop_select": "വിള", "stage_select": "വളർച്ചാ ഘട്ടം", "launch_btn": "വിശകലനം ആരംഭിക്കുക 🚀", "error_fill": "⚠️ പേര് നൽകുക.", "sync_text": "🟢 തത്സമയ സമന്വയം:", "lightning_alert": "⚡ മിന്നൽ മുന്നറിയിപ്പ്", "telemetry_header": "📡 കാലാവസ്ഥ", "moisture": "മണ്ണിലെ ഈർപ്പം", "rain_24h": "മഴ", "wind": "കാറ്റ്", "temp": "താപനില", "forecast_header": "📅 7-ദിവസത്തെ പ്രവചനം", "scorecard_header": "🛡️ പ്രതിരോധ കാർഡ്", "risk_level": "അപകടസാധ്യത", "primary_threat": "ഭീഷണി", "readiness_score": "തയ്യാറെടുപ്പ്", "checklist_title": "പ്രവർത്തന പട്ടിക:", "soil_header": "🧪 മണ്ണിന്റെ പോഷകങ്ങൾ", "stages": ["വിതയ്ക്കൽ", "വളർച്ച", "പൂവിടൽ", "വിളവെടുപ്പിന് മുമ്പ്"], "sos_header": "🆘 കർഷകർക്കുള്ള അടിയന്തര നമ്പറുകൾ"}
 }
 
-# --- EXPANDED CROP AI DB (Deep Agronomic Knowledge) ---
+# --- EXPANDED CROP AI DB ---
 CROP_DB = {
+    "None (Need Suggestion)": {
+        "moisture_optimum": [0.0, 1.0], "rain_max": 999, "wind_max": 999,
+        "threats": {}, "advice": {} # Logic handled dynamically by get_crop_suggestion()
+    },
     "Rice (వరి)": {
         "moisture_optimum": [0.60, 1.0], "rain_max": 150, "wind_max": 45,
         "threats": {"flood": "Lodging", "drought": "Stunting", "wind": "Lodging Risk"},
@@ -176,7 +223,9 @@ if st.session_state.current_page == "Intake":
             st.session_state.crop = crop_choice
             
             raw_stages = ["Sowing", "Vegetative", "Flowering", "Pre-Harvest"]
-            stage_index = st.selectbox(T['stage_select'], range(len(T['stages'])), format_func=lambda x: T['stages'][x])
+            # Disable stage select if None is chosen
+            stage_disabled = (crop_choice == "None (Need Suggestion)")
+            stage_index = st.selectbox(T['stage_select'], range(len(T['stages'])), format_func=lambda x: T['stages'][x], disabled=stage_disabled)
             st.session_state.stage = raw_stages[stage_index]
             st.session_state.stage_display = T['stages'][stage_index]
             
@@ -209,7 +258,8 @@ elif st.session_state.current_page == "Dashboard":
     col_h1, col_h2, col_h3 = st.columns([4, 1, 1])
     with col_h1:
         st.title(f"📊 {st.session_state.farmer_name} | {st.session_state.city.split(',')[0]}")
-        st.caption(f"🌾 {crop} — **{st.session_state.stage_display}**")
+        sub_text = "🌾 **Field Evaluation Mode**" if crop == "None (Need Suggestion)" else f"🌾 {crop} — **{st.session_state.stage_display}**"
+        st.caption(sub_text)
     with col_h2:
         if st.button("🔄 Sync API", use_container_width=True):
             st.session_state.live_data = fetch_live_data(st.session_state.city)
@@ -255,29 +305,36 @@ elif st.session_state.current_page == "Dashboard":
     moist_val = weather['soil_moisture']
     wind_val = weather['wind_gust']
     
-    threat = "Optimal"
-    risk_level = "🟢 LOW RISK"
-    actions = []
-    
-    if moist_val > rules['moisture_optimum'][1] or rain_val >= rules['rain_max']:
-        threat = rules['threats']['flood']
-        risk_level = "🔴 CRITICAL"
-        actions.append("Open perimeter drainage trenches.")
-    elif moist_val < rules['moisture_optimum'][0]:
-        threat = rules['threats']['drought']
-        risk_level = "🟠 MODERATE"
-        actions.append(f"Turn on micro-irrigation targeting {rules['moisture_optimum'][0]*100:.0f}% moisture.")
-    
-    if wind_val > rules['wind_max']:
-        risk_level = "🔴 HIGH RISK"
-        threat = rules['threats']['wind']
-        if "Banana" in crop:
-            actions.append("URGENT: Prop up pseudostems with bamboo poles immediately to prevent uprooting.")
-        else:
-            actions.append("Postpone foliar chemical spraying.")
+    if crop == "None (Need Suggestion)":
+        threat = "Field Empty"
+        risk_level = "⚪ STANDBY"
+        actions = ["Review AI Crop Recommendation below.", "Prepare soil beds for planting.", "Check 7-day forecast for sowing windows."]
+        advice_text = get_crop_suggestion(soil, weather, st.session_state.lang)
+    else:
+        threat = "Optimal"
+        risk_level = "🟢 LOW RISK"
+        actions = []
+        if moist_val > rules['moisture_optimum'][1] or rain_val >= rules['rain_max']:
+            threat = rules['threats']['flood']
+            risk_level = "🔴 CRITICAL"
+            actions.append("Open perimeter drainage trenches.")
+        elif moist_val < rules['moisture_optimum'][0]:
+            threat = rules['threats']['drought']
+            risk_level = "🟠 MODERATE"
+            actions.append(f"Turn on micro-irrigation targeting {rules['moisture_optimum'][0]*100:.0f}% moisture.")
         
-    if not actions:
-        actions.append("Crop is currently stable. Maintain regular schedules.")
+        if wind_val > rules['wind_max']:
+            risk_level = "🔴 HIGH RISK"
+            threat = rules['threats']['wind']
+            if "Banana" in crop:
+                actions.append("URGENT: Prop up pseudostems with bamboo poles immediately to prevent uprooting.")
+            else:
+                actions.append("Postpone foliar chemical spraying.")
+            
+        if not actions:
+            actions.append("Crop is currently stable. Maintain regular schedules.")
+            
+        advice_text = rules['advice'][stage]
 
     sc1, sc2, sc3 = st.columns([1, 1, 1])
     sc1.metric(T['risk_level'], risk_level)
@@ -290,9 +347,9 @@ elif st.session_state.current_page == "Dashboard":
     st.progress(score_pct / 100)
     
     with st.container(border=True):
-        st.markdown(f"**💡 AI Diagnostic Insight ({st.session_state.stage_display}):**")
-        # NEW: Prints the deeply detailed 3-to-4 sentence agronomic advice block
-        st.write(rules['advice'][stage])
+        insight_title = "**💡 AI Crop Recommendation:**" if crop == "None (Need Suggestion)" else f"**💡 AI Diagnostic Insight ({st.session_state.stage_display}):**"
+        st.markdown(insight_title)
+        st.write(advice_text)
     st.divider()
 
     # Soil NPK
@@ -306,7 +363,7 @@ elif st.session_state.current_page == "Dashboard":
         chart_df = pd.DataFrame({"Level": [soil['N'], soil['P'], soil['K']]}, index=["N", "P", "K"])
         st.bar_chart(chart_df, height=200)
 
-    # --- NEW: GOVERNMENT EMERGENCY NUMBERS ---
+    # GOVERNMENT EMERGENCY NUMBERS
     st.divider()
     st.markdown(f"### {T['sos_header']}")
     sos1, sos2, sos3, sos4 = st.columns(4)
