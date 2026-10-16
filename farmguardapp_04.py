@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import requests
 import random
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="Agri-Sentinel OS", page_icon="🌾", layout="wide", initial_sidebar_state="collapsed")
@@ -66,7 +66,7 @@ def fetch_live_data(city_name):
         soil_data = {"N": 80.0, "P": 40.0, "K": 40.0, "ph": 6.5}
         
     return {
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "timestamp": (datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)).strftime("%Y-%m-%d %I:%M:%S %p (IST)"),
         "weather": weather_data,
         "soil": soil_data
     }
