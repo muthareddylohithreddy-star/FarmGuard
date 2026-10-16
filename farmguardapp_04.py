@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import json
 import requests
 import random
 from datetime import datetime
@@ -12,25 +11,23 @@ if 'current_page' not in st.session_state:
     st.session_state.current_page = "Intake"
 if 'lang' not in st.session_state:
     st.session_state.lang = "English"
+if 'live_data' not in st.session_state:
+    st.session_state.live_data = None
 
 def navigate_to(page_name):
     st.session_state.current_page = page_name
 
-# --- NEW: CITY TO COORDINATE MAPPING ---
+# --- CITY TO COORDINATE MAPPING ---
 CITIES = {
-    "Tirupati, AP": (13.6288, 79.4192),
-    "Chittoor, AP": (13.2172, 79.1003),
-    "Nellore, AP": (14.4426, 79.9865),
-    "Kadapa, AP": (14.4673, 78.8242),
-    "Kurnool, AP": (15.8281, 78.0373),
-    "Anantapur, AP": (14.6819, 77.6006),
-    "Chennai, TN": (13.0827, 80.2707),
-    "Bengaluru, KA": (12.9716, 77.5946),
+    "Tirupati, AP": (13.6288, 79.4192), "Chittoor, AP": (13.2172, 79.1003),
+    "Nellore, AP": (14.4426, 79.9865), "Kadapa, AP": (14.4673, 78.8242),
+    "Kurnool, AP": (15.8281, 78.0373), "Anantapur, AP": (14.6819, 77.6006),
+    "Chennai, TN": (13.0827, 80.2707), "Bengaluru, KA": (12.9716, 77.5946),
     "Hyderabad, TG": (17.3850, 78.4867)
 }
 
-# --- SATELLITE FETCH FUNCTION (NOW USES SELECTED CITY) ---
-def force_sensor_sync(city_name):
+# --- CLOUD-NATIVE SATELLITE FETCH (NO JSON FILE USED) ---
+def fetch_live_data(city_name):
     lat, lon = CITIES[city_name]
     url = (
         f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}"
@@ -47,20 +44,15 @@ def force_sensor_sync(city_name):
         daily = res.get('daily', {})
         for i in range(len(daily.get('time', []))):
             forecast_7d.append({
-                "date": daily['time'][i],
-                "temp_max": daily['temperature_2m_max'][i],
-                "temp_min": daily['temperature_2m_min'][i],
-                "rain_sum": daily['precipitation_sum'][i],
+                "date": daily['time'][i], "temp_max": daily['temperature_2m_max'][i],
+                "temp_min": daily['temperature_2m_min'][i], "rain_sum": daily['precipitation_sum'][i],
                 "wind_max": daily['wind_speed_10m_max'][i],
             })
             
         weather_data = {
-            "temp": res['current']['temperature_2m'],
-            "rain_24h": res['current']['precipitation'],
-            "wind_gust": res['current']['wind_gusts_10m'],
-            "soil_moisture": abs(res['hourly']['soil_moisture_0_to_7cm'][0]),
-            "weather_code": weather_code,
-            "forecast_7d": forecast_7d,
+            "temp": res['current']['temperature_2m'], "rain_24h": res['current']['precipitation'],
+            "wind_gust": res['current']['wind_gusts_10m'], "soil_moisture": abs(res['hourly']['soil_moisture_0_to_7cm'][0]),
+            "weather_code": weather_code, "forecast_7d": forecast_7d,
             "lightning_strike_km": round(random.uniform(1.2, 5.0), 1) if weather_code in [95, 96, 99] else None
         }
     except:
@@ -73,14 +65,11 @@ def force_sensor_sync(city_name):
     except:
         soil_data = {"N": 80.0, "P": 40.0, "K": 40.0, "ph": 6.5}
         
-    current_state = {
+    return {
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "weather": weather_data,
         "soil": soil_data
     }
-    
-    with open("live_farm_data.json", "w") as f:
-        json.dump(current_state, f)
 
 # --- 6-LANGUAGE UI TRANSLATIONS ---
 TRANSLATIONS = {
@@ -92,8 +81,6 @@ TRANSLATIONS = {
     "മലയാളം": {"title": "🌾 അഗ്രി-സെന്റിനൽ OS", "subtitle": "കൃത്യമായ കൃഷി", "intake_header": "കാർഷിക പ്രൊഫൈൽ", "farmer_name": "കർഷകന്റെ പേര്", "location": "നഗരം", "crop_select": "വിള", "stage_select": "വളർച്ചാ ഘട്ടം", "launch_btn": "വിശകലനം ആരംഭിക്കുക 🚀", "error_fill": "⚠️ പേര് നൽകുക.", "sync_text": "🟢 തത്സമയ സമന്വയം:", "lightning_alert": "⚡ മിന്നൽ മുന്നറിയിപ്പ്", "telemetry_header": "📡 കാലാവസ്ഥ", "moisture": "മണ്ണിലെ ഈർപ്പം", "rain_24h": "മഴ", "wind": "കാറ്റ്", "temp": "താപനില", "forecast_header": "📅 7-ദിവസത്തെ പ്രവചനം", "scorecard_header": "🛡️ പ്രതിരോധ കാർഡ്", "risk_level": "അപകടസാധ്യത", "primary_threat": "ഭീഷണി", "readiness_score": "തയ്യാറെടുപ്പ്", "checklist_title": "പ്രവർത്തന പട്ടിക:", "soil_header": "🧪 മണ്ണിന്റെ പോഷകങ്ങൾ", "stages": ["വിതയ്ക്കൽ", "വളർച്ച", "പൂവിടൽ", "വിളവെടുപ്പിന് മുമ്പ്"]}
 }
 
-# --- EXPANDED CROP AI DB ---
-# Includes specific wind thresholds. E.g., Banana breaks at 35 km/h, Rice lodges at 45.
 CROP_DB = {
     "Rice (వరి)": {
         "moisture_optimum": [0.60, 1.0], "rain_max": 150, "wind_max": 45,
@@ -111,28 +98,21 @@ CROP_DB = {
         "advice": {"Sowing": "Heavy rain traps seedlings.", "Vegetative": "Deep roots tolerate drought.", "Flowering": "Rain washes away pollen.", "Pre-Harvest": "CRITICAL: Rain discolors lint."}
     },
     "Banana (అరటి)": {
-        "moisture_optimum": [0.70, 0.90], "rain_max": 100, "wind_max": 30, # Highly sensitive to wind
+        "moisture_optimum": [0.70, 0.90], "rain_max": 100, "wind_max": 30, 
         "threats": {"flood": "Panama Wilt Risk", "drought": "Leaf Scorch", "wind": "CRITICAL Uprooting Threat"},
-        "advice": {"Sowing": "Maintain high soil moisture for tissue culture survival.", "Vegetative": "Needs heavy water. Wind above 30km/h tears leaves.", "Flowering": "High moisture needed to push out the bunch.", "Pre-Harvest": "Prop up pseudostems immediately to prevent wind lodging."}
+        "advice": {"Sowing": "Maintain high soil moisture.", "Vegetative": "Wind above 30km/h tears leaves.", "Flowering": "High moisture needed.", "Pre-Harvest": "Prop up pseudostems immediately."}
     },
     "Mango (మామిడి)": {
         "moisture_optimum": [0.30, 0.60], "rain_max": 60, "wind_max": 50,
         "threats": {"flood": "Fungal Rot", "drought": "Fruit Drop", "wind": "Fruit Drop"},
-        "advice": {"Sowing": "Saplings need moderate watering.", "Vegetative": "Very drought tolerant deep roots.", "Flowering": "CRITICAL DANGER: Rain washes away flowers and promotes Powdery Mildew.", "Pre-Harvest": "Heavy wind and rain cause severe premature fruit drop."}
+        "advice": {"Sowing": "Saplings need moderate watering.", "Vegetative": "Drought tolerant deep roots.", "Flowering": "CRITICAL DANGER: Rain washes flowers.", "Pre-Harvest": "Heavy wind causes fruit drop."}
     },
     "Chilli (మిరప)": {
         "moisture_optimum": [0.45, 0.65], "rain_max": 40, "wind_max": 40,
         "threats": {"flood": "Collar Rot", "drought": "Flower Drop", "wind": "Plant Snapping"},
-        "advice": {"Sowing": "Nursery beds need gentle misting. Heavy rain destroys seeds.", "Vegetative": "Waterlogging causes immediate root rot.", "Flowering": "Moisture stress or rain causes blossom drop.", "Pre-Harvest": "Dry weather required to maintain pungency and prevent fruit rot."}
+        "advice": {"Sowing": "Nursery beds need misting.", "Vegetative": "Waterlogging causes root rot.", "Flowering": "Moisture stress drops blossoms.", "Pre-Harvest": "Dry weather maintains pungency."}
     }
 }
-
-def load_live_data():
-    try:
-        with open("live_farm_data.json", "r") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return None
 
 # Top Bar Language Toggle
 lang_col1, lang_col2 = st.columns([5, 4])
@@ -156,7 +136,6 @@ if st.session_state.current_page == "Intake":
         col1, col2 = st.columns(2)
         with col1:
             st.session_state.farmer_name = st.text_input(T['farmer_name'], "Lohith Reddy")
-            # NEW: City Dropdown instead of Text Input
             st.session_state.city = st.selectbox(T['location'], list(CITIES.keys()))
         with col2:
             crop_choice = st.selectbox(T['crop_select'], list(CROP_DB.keys()))
@@ -170,8 +149,8 @@ if st.session_state.current_page == "Intake":
         st.write("")
         if st.button(T['launch_btn'], type="primary", use_container_width=True):
             if st.session_state.farmer_name:
-                # NEW: Instantly fetch data for the exact selected city before loading dashboard
-                force_sensor_sync(st.session_state.city)
+                # INSTANT API FETCH: Saved strictly to memory, no local JSON files
+                st.session_state.live_data = fetch_live_data(st.session_state.city)
                 navigate_to("Dashboard")
                 st.rerun()
             else:
@@ -182,11 +161,12 @@ if st.session_state.current_page == "Intake":
 # ==========================================
 elif st.session_state.current_page == "Dashboard":
     
-    data = load_live_data()
-    if not data:
-        st.error("⚠️ Data Offline.")
+    if st.session_state.live_data is None:
+        st.error("⚠️ Data connection lost. Please restart diagnostics.")
+        st.button("Return Home", on_click=navigate_to, args=("Intake",))
         st.stop()
 
+    data = st.session_state.live_data
     weather = data['weather']
     soil = data['soil']
     crop = st.session_state.crop
@@ -199,7 +179,8 @@ elif st.session_state.current_page == "Dashboard":
         st.caption(f"🌾 {crop} — **{st.session_state.stage_display}**")
     with col_h2:
         if st.button("🔄 Sync API", use_container_width=True):
-            force_sensor_sync(st.session_state.city)
+            # FRESH DATA FETCH ON BUTTON PRESS
+            st.session_state.live_data = fetch_live_data(st.session_state.city)
             st.rerun()
     with col_h3:
         st.button("⚙️ Home", on_click=navigate_to, args=("Intake",), use_container_width=True)
@@ -236,7 +217,7 @@ elif st.session_state.current_page == "Dashboard":
                     st.write(f"🌧️ **{rain_val}mm**")
     st.divider()
 
-    # Scorecard Logic (Upgraded for Crop Specific Wind Threats)
+    # Scorecard Logic
     st.markdown(f"### {T['scorecard_header']}")
     rain_val = weather['rain_24h']
     moist_val = weather['soil_moisture']
@@ -255,7 +236,6 @@ elif st.session_state.current_page == "Dashboard":
         risk_level = "🟠 MODERATE"
         actions.append(f"Turn on micro-irrigation targeting {rules['moisture_optimum'][0]*100:.0f}% moisture.")
     
-    # Advanced Wind Logic: Banana is highly sensitive compared to other crops
     if wind_val > rules['wind_max']:
         risk_level = "🔴 HIGH RISK"
         threat = rules['threats']['wind']
@@ -277,7 +257,6 @@ elif st.session_state.current_page == "Dashboard":
     sc3.metric(T['readiness_score'], f"{score_pct}%")
     st.progress(score_pct / 100)
     
-    # Deep Agronomic Insight
     with st.container(border=True):
         st.markdown(f"**💡 AI Diagnostic Insight ({st.session_state.stage_display}):**")
         st.write(rules['advice'][stage])
