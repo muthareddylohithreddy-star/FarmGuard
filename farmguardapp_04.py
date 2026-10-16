@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import requests
 import random
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone, timedelta
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="Agri-Sentinel OS", page_icon="🌾", layout="wide", initial_sidebar_state="collapsed")
@@ -26,7 +26,7 @@ CITIES = {
     "Hyderabad, TG": (17.3850, 78.4867)
 }
 
-# --- CLOUD-NATIVE SATELLITE FETCH (NO JSON FILE USED) ---
+# --- CLOUD-NATIVE SATELLITE FETCH ---
 def fetch_live_data(city_name):
     lat, lon = CITIES[city_name]
     url = (
@@ -65,52 +65,86 @@ def fetch_live_data(city_name):
     except:
         soil_data = {"N": 80.0, "P": 40.0, "K": 40.0, "ph": 6.5}
         
+    # NEW: Forces exact Indian Standard Time (IST) conversion
+    ist_time = datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)
+    
     return {
-        "timestamp": (datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)).strftime("%Y-%m-%d %I:%M:%S %p (IST)"),
+        "timestamp": ist_time.strftime("%Y-%m-%d %I:%M:%S %p (IST)"),
         "weather": weather_data,
         "soil": soil_data
     }
 
 # --- 6-LANGUAGE UI TRANSLATIONS ---
 TRANSLATIONS = {
-    "English": {"title": "🌾 Agri-Sentinel OS", "subtitle": "Precision Agronomics", "intake_header": "Configure Farm Profile", "farmer_name": "Farmer Name", "location": "Select City/Region", "crop_select": "Select Crop", "stage_select": "Growth Stage", "launch_btn": "Launch Diagnostics 🚀", "error_fill": "⚠️ Enter name.", "sync_text": "🟢 Live Satellite Sync:", "lightning_alert": "⚡ LIGHTNING DETECTED", "telemetry_header": "📡 Atmospheric Telemetry", "moisture": "Soil Moisture", "rain_24h": "24h Rain", "wind": "Wind Gusts", "temp": "Temperature", "forecast_header": "📅 7-Day Forecast", "scorecard_header": "🛡️ Prevention Scorecard", "risk_level": "Risk Level", "primary_threat": "Threat", "readiness_score": "Readiness", "checklist_title": "Action Checklist:", "soil_header": "🧪 Soil Macronutrients", "stages": ["Sowing", "Vegetative", "Flowering", "Pre-Harvest"]},
-    "తెలుగు": {"title": "🌾 అగ్రి-సెంటినెల్ OS", "subtitle": "ఖచ్చితమైన వ్యవసాయం", "intake_header": "వ్యవసాయ వివరాలు", "farmer_name": "రైతు పేరు", "location": "ప్రాంతం ఎంచుకోండి", "crop_select": "పంటను ఎంచుకోండి", "stage_select": "పెరుగుదల దశ", "launch_btn": "విశ్లేషణ ప్రారంభించండి 🚀", "error_fill": "⚠️ పేరు నమోదు చేయండి.", "sync_text": "🟢 లైవ్ సింక్:", "lightning_alert": "⚡ పిడుగుపాటు హెచ్చరిక", "telemetry_header": "📡 వాతావరణ రీడింగులు", "moisture": "నేలలో తేమ", "rain_24h": "వర్షపాతం", "wind": "గాలి వేగం", "temp": "ఉష్ణోగ్రత", "forecast_header": "📅 7 రోజుల సూచన", "scorecard_header": "🛡️ నష్ట నివారణ స్కోర్‌కార్డ్", "risk_level": "ప్రమాద స్థాయి", "primary_threat": "ప్రధాన ముప్పు", "readiness_score": "సంసిద్ధత", "checklist_title": "చర్యల జాబితా:", "soil_header": "🧪 నేల పోషకాలు", "stages": ["విత్తే దశ", "ఏపుగా పెరిగే దశ", "పూత దశ", "కోతకు ముందు దశ"]},
-    "हिंदी": {"title": "🌾 एग्री-सेंटिनेल OS", "subtitle": "सटीक कृषि", "intake_header": "खेत प्रोफ़ाइल", "farmer_name": "किसान का नाम", "location": "शहर चुनें", "crop_select": "फसल चुनें", "stage_select": "विकास चरण", "launch_btn": "विश्लेषण शुरू करें 🚀", "error_fill": "⚠️ नाम दर्ज करें।", "sync_text": "🟢 लाइव सिंक:", "lightning_alert": "⚡ बिजली की चेतावनी", "telemetry_header": "📡 वायुमंडलीय टेलीमेट्री", "moisture": "मिट्टी की नमी", "rain_24h": "बारिश", "wind": "हवा की गति", "temp": "तापमान", "forecast_header": "📅 7-दिवसीय पूर्वानुमान", "scorecard_header": "🛡️ निवारण स्कोरकार्ड", "risk_level": "जोखिम स्तर", "primary_threat": "खतरा", "readiness_score": "तैयारी", "checklist_title": "कार्रवाई सूची:", "soil_header": "🧪 मिट्टी के पोषक तत्व", "stages": ["बुवाई", "वनस्पतिक", "फूल आना", "कटाई से पहले"]},
-    "தமிழ்": {"title": "🌾 அக்ரி-சென்டினல் OS", "subtitle": "துல்லிய விவசாயம்", "intake_header": "விவசாய விவரங்கள்", "farmer_name": "விவசாயி பெயர்", "location": "நகரம்", "crop_select": "பயிர்", "stage_select": "வளர்ச்சி நிலை", "launch_btn": "பகுப்பாய்வு தொடங்கு 🚀", "error_fill": "⚠️ பெயரை உள்ளிடவும்.", "sync_text": "🟢 நேரடி ஒத்திசைவு:", "lightning_alert": "⚡ மின்னல் எச்சரிக்கை", "telemetry_header": "📡 வானிலை", "moisture": "மண் ஈரப்பதம்", "rain_24h": "மழை", "wind": "காற்று", "temp": "வெப்பநிலை", "forecast_header": "📅 7-நாள் முன்னறிவிப்பு", "scorecard_header": "🛡️ தடுப்பு அட்டை", "risk_level": "ஆபத்து நிலை", "primary_threat": "அச்சுறுத்தல்", "readiness_score": "தயார்நிலை", "checklist_title": "செயல் பட்டியல்:", "soil_header": "🧪 மண் ஊட்டச்சத்துக்கள்", "stages": ["விதைப்பு", "வளர்ச்சி", "பூக்கும்", "அறுவடைக்கு முன்"]},
-    "ಕನ್ನಡ": {"title": "🌾 ಅಗ್ರಿ-ಸೆಂಟಿನೆಲ್ OS", "subtitle": "ನಿಖರ ಕೃಷಿ", "intake_header": "ಕೃಷಿ ವಿವರಗಳು", "farmer_name": "ರೈತನ ಹೆಸರು", "location": "ನಗರ", "crop_select": "ಬೆಳೆ", "stage_select": "ಬೆಳವಣಿಗೆ ಹಂತ", "launch_btn": "ವಿಶ್ಲೇಷಣೆ ಪ್ರಾರಂಭಿಸಿ 🚀", "error_fill": "⚠️ ಹೆಸರನ್ನು ನಮೂದಿಸಿ.", "sync_text": "🟢 ಲೈವ್ ಸಿಂಕ್:", "lightning_alert": "⚡ ಮಿಂಚು ಎಚ್ಚರಿಕೆ", "telemetry_header": "📡 ಹವಾಮಾನ", "moisture": "ಮಣ್ಣಿನ ತೇವಾಂಶ", "rain_24h": "ಮಳೆ", "wind": "ಗಾಳಿ", "temp": "ತಾಪಮಾನ", "forecast_header": "📅 7-ದಿನದ ಮುನ್ಸೂಚನೆ", "scorecard_header": "🛡️ ತಡೆಗಟ್ಟುವಿಕೆ ಕಾರ್ಡ್", "risk_level": "ಅಪಾಯದ ಮಟ್ಟ", "primary_threat": "ಬೆದರಿಕೆ", "readiness_score": "ಸಿದ್ಧತೆ", "checklist_title": "ಕ್ರಿಯಾ ಪಟ್ಟಿ:", "soil_header": "🧪 ಮಣ್ಣಿನ ಪೋಷಕಾಂಶಗಳು", "stages": ["ಬಿತ್ತನೆ", "ಬೆಳವಣಿಗೆ", "ಹೂಬಿಡುವಿಕೆ", "ಕೊಯ್ಲಿಗೆ ಮುನ್ನ"]},
-    "മലയാളം": {"title": "🌾 അഗ്രി-സെന്റിനൽ OS", "subtitle": "കൃത്യമായ കൃഷി", "intake_header": "കാർഷിക പ്രൊഫൈൽ", "farmer_name": "കർഷകന്റെ പേര്", "location": "നഗരം", "crop_select": "വിള", "stage_select": "വളർച്ചാ ഘട്ടം", "launch_btn": "വിശകലനം ആരംഭിക്കുക 🚀", "error_fill": "⚠️ പേര് നൽകുക.", "sync_text": "🟢 തത്സമയ സമന്വയം:", "lightning_alert": "⚡ മിന്നൽ മുന്നറിയിപ്പ്", "telemetry_header": "📡 കാലാവസ്ഥ", "moisture": "മണ്ണിലെ ഈർപ്പം", "rain_24h": "മഴ", "wind": "കാറ്റ്", "temp": "താപനില", "forecast_header": "📅 7-ദിവസത്തെ പ്രവചനം", "scorecard_header": "🛡️ പ്രതിരോധ കാർഡ്", "risk_level": "അപകടസാധ്യത", "primary_threat": "ഭീഷണി", "readiness_score": "തയ്യാറെടുപ്പ്", "checklist_title": "പ്രവർത്തന പട്ടിക:", "soil_header": "🧪 മണ്ണിന്റെ പോഷകങ്ങൾ", "stages": ["വിതയ്ക്കൽ", "വളർച്ച", "പൂവിടൽ", "വിളവെടുപ്പിന് മുമ്പ്"]}
+    "English": {"title": "🌾 Agri-Sentinel OS", "subtitle": "Precision Agronomics", "intake_header": "Configure Farm Profile", "farmer_name": "Farmer Name", "location": "Select City/Region", "crop_select": "Select Crop", "stage_select": "Growth Stage", "launch_btn": "Launch Diagnostics 🚀", "error_fill": "⚠️ Enter name.", "sync_text": "🟢 Live Satellite Sync:", "lightning_alert": "⚡ LIGHTNING DETECTED", "telemetry_header": "📡 Atmospheric Telemetry", "moisture": "Soil Moisture", "rain_24h": "24h Rain", "wind": "Wind Gusts", "temp": "Temperature", "forecast_header": "📅 7-Day Forecast", "scorecard_header": "🛡️ Prevention Scorecard", "risk_level": "Risk Level", "primary_threat": "Threat", "readiness_score": "Readiness", "checklist_title": "Action Checklist:", "soil_header": "🧪 Soil Macronutrients", "stages": ["Sowing", "Vegetative", "Flowering", "Pre-Harvest"], "sos_header": "🆘 Emergency Support & Farmer Helplines"},
+    "తెలుగు": {"title": "🌾 అగ్రి-సెంటినెల్ OS", "subtitle": "ఖచ్చితమైన వ్యవసాయం", "intake_header": "వ్యవసాయ వివరాలు", "farmer_name": "రైతు పేరు", "location": "ప్రాంతం ఎంచుకోండి", "crop_select": "పంటను ఎంచుకోండి", "stage_select": "పెరుగుదల దశ", "launch_btn": "విశ్లేషణ ప్రారంభించండి 🚀", "error_fill": "⚠️ పేరు నమోదు చేయండి.", "sync_text": "🟢 లైవ్ సింక్:", "lightning_alert": "⚡ పిడుగుపాటు హెచ్చరిక", "telemetry_header": "📡 వాతావరణ రీడింగులు", "moisture": "నేలలో తేమ", "rain_24h": "వర్షపాతం", "wind": "గాలి వేగం", "temp": "ఉష్ణోగ్రత", "forecast_header": "📅 7 రోజుల సూచన", "scorecard_header": "🛡️ నష్ట నివారణ స్కోర్‌కార్డ్", "risk_level": "ప్రమాద స్థాయి", "primary_threat": "ప్రధాన ముప్పు", "readiness_score": "సంసిద్ధత", "checklist_title": "చర్యల జాబితా:", "soil_header": "🧪 నేల పోషకాలు", "stages": ["విత్తే దశ", "ఏపుగా పెరిగే దశ", "పూత దశ", "కోతకు ముందు దశ"], "sos_header": "🆘 అత్యవసర ప్రభుత్వ సహాయ నంబర్లు"},
+    "हिंदी": {"title": "🌾 एग्री-सेंटिनेल OS", "subtitle": "सटीक कृषि", "intake_header": "खेत प्रोफ़ाइल", "farmer_name": "किसान का नाम", "location": "शहर चुनें", "crop_select": "फसल चुनें", "stage_select": "विकास चरण", "launch_btn": "विश्लेषण शुरू करें 🚀", "error_fill": "⚠️ नाम दर्ज करें।", "sync_text": "🟢 लाइव सिंक:", "lightning_alert": "⚡ बिजली की चेतावनी", "telemetry_header": "📡 वायुमंडलीय टेलीमेट्री", "moisture": "मिट्टी की नमी", "rain_24h": "बारिश", "wind": "हवा की गति", "temp": "तापमान", "forecast_header": "📅 7-दिवसीय पूर्वानुमान", "scorecard_header": "🛡️ निवारण स्कोरकार्ड", "risk_level": "जोखिम स्तर", "primary_threat": "खतरा", "readiness_score": "तैयारी", "checklist_title": "कार्रवाई सूची:", "soil_header": "🧪 मिट्टी के पोषक तत्व", "stages": ["बुवाई", "वनस्पतिक", "फूल आना", "कटाई से पहले"], "sos_header": "🆘 आपातकालीन किसान हेल्पलाइन"},
+    "தமிழ்": {"title": "🌾 அக்ரி-சென்டினல் OS", "subtitle": "துல்லிய விவசாயம்", "intake_header": "விவசாய விவரங்கள்", "farmer_name": "விவசாயி பெயர்", "location": "நகரம்", "crop_select": "பயிர்", "stage_select": "வளர்ச்சி நிலை", "launch_btn": "பகுப்பாய்வு தொடங்கு 🚀", "error_fill": "⚠️ பெயரை உள்ளிடவும்.", "sync_text": "🟢 நேரடி ஒத்திசைவு:", "lightning_alert": "⚡ மின்னல் எச்சரிக்கை", "telemetry_header": "📡 வானிலை", "moisture": "மண் ஈரப்பதம்", "rain_24h": "மழை", "wind": "காற்று", "temp": "வெப்பநிலை", "forecast_header": "📅 7-நாள் முன்னறிவிப்பு", "scorecard_header": "🛡️ தடுப்பு அட்டை", "risk_level": "ஆபத்து நிலை", "primary_threat": "அச்சுறுத்தல்", "readiness_score": "தயார்நிலை", "checklist_title": "செயல் பட்டியல்:", "soil_header": "🧪 மண் ஊட்டச்சத்துக்கள்", "stages": ["விதைப்பு", "வளர்ச்சி", "பூக்கும்", "அறுவடைக்கு முன்"], "sos_header": "🆘 விவசாயிகளுக்கான அவசர எண்கள்"},
+    "ಕನ್ನಡ": {"title": "🌾 ಅಗ್ರಿ-ಸೆಂಟಿನೆಲ್ OS", "subtitle": "ನಿಖರ ಕೃಷಿ", "intake_header": "ಕೃಷಿ ವಿವರಗಳು", "farmer_name": "ರೈತನ ಹೆಸರು", "location": "ನಗರ", "crop_select": "ಬೆಳೆ", "stage_select": "ಬೆಳವಣಿಗೆ ಹಂತ", "launch_btn": "ವಿಶ್ಲೇಷಣೆ ಪ್ರಾರಂಭಿಸಿ 🚀", "error_fill": "⚠️ ಹೆಸರನ್ನು ನಮೂದಿಸಿ.", "sync_text": "🟢 ಲೈವ್ ಸಿಂಕ್:", "lightning_alert": "⚡ ಮಿಂಚು ಎಚ್ಚರಿಕೆ", "telemetry_header": "📡 ಹವಾಮಾನ", "moisture": "ಮಣ್ಣಿನ ತೇವಾಂಶ", "rain_24h": "ಮಳೆ", "wind": "ಗಾಳಿ", "temp": "ತಾಪಮಾನ", "forecast_header": "📅 7-ದಿನದ ಮುನ್ಸೂಚನೆ", "scorecard_header": "🛡️ ತಡೆಗಟ್ಟುವಿಕೆ ಕಾರ್ಡ್", "risk_level": "ಅಪಾಯದ ಮಟ್ಟ", "primary_threat": "ಬೆದರಿಕೆ", "readiness_score": "ಸಿದ್ಧತೆ", "checklist_title": "ಕ್ರಿಯಾ ಪಟ್ಟಿ:", "soil_header": "🧪 ಮಣ್ಣಿನ ಪೋಷಕಾಂಶಗಳು", "stages": ["ಬಿತ್ತನೆ", "ಬೆಳವಣಿಗೆ", "ಹೂಬಿಡುವಿಕೆ", "ಕೊಯ್ಲಿಗೆ ಮುನ್ನ"], "sos_header": "🆘 ರೈತ ಸಹಾಯವಾಣಿ ಸಂಖ್ಯೆಗಳು"},
+    "മലയാളം": {"title": "🌾 അഗ്രി-സെന്റിനൽ OS", "subtitle": "കൃത്യമായ കൃഷി", "intake_header": "കാർഷിക പ്രൊഫൈൽ", "farmer_name": "കർഷകന്റെ പേര്", "location": "നഗരം", "crop_select": "വിള", "stage_select": "വളർച്ചാ ഘട്ടം", "launch_btn": "വിശകലനം ആരംഭിക്കുക 🚀", "error_fill": "⚠️ പേര് നൽകുക.", "sync_text": "🟢 തത്സമയ സമന്വയം:", "lightning_alert": "⚡ മിന്നൽ മുന്നറിയിപ്പ്", "telemetry_header": "📡 കാലാവസ്ഥ", "moisture": "മണ്ണിലെ ഈർപ്പം", "rain_24h": "മഴ", "wind": "കാറ്റ്", "temp": "താപനില", "forecast_header": "📅 7-ദിവസത്തെ പ്രവചനം", "scorecard_header": "🛡️ പ്രതിരോധ കാർഡ്", "risk_level": "അപകടസാധ്യത", "primary_threat": "ഭീഷണി", "readiness_score": "തയ്യാറെടുപ്പ്", "checklist_title": "പ്രവർത്തന പട്ടിക:", "soil_header": "🧪 മണ്ണിന്റെ പോഷകങ്ങൾ", "stages": ["വിതയ്ക്കൽ", "വളർച്ച", "പൂവിടൽ", "വിളവെടുപ്പിന് മുമ്പ്"], "sos_header": "🆘 കർഷകർക്കുള്ള അടിയന്തര നമ്പറുകൾ"}
 }
 
+# --- EXPANDED CROP AI DB (Deep Agronomic Knowledge) ---
 CROP_DB = {
     "Rice (వరి)": {
         "moisture_optimum": [0.60, 1.0], "rain_max": 150, "wind_max": 45,
         "threats": {"flood": "Lodging", "drought": "Stunting", "wind": "Lodging Risk"},
-        "advice": {"Sowing": "Rain is highly beneficial for puddling.", "Vegetative": "Maintain 3-5cm water.", "Flowering": "Rain washes pollen. Halt spray.", "Pre-Harvest": "Drain field completely."}
+        "advice": {
+            "Sowing": "Rainfall right now is highly beneficial for puddling the soil and preparing a soft seedbed. Ensure your field is properly leveled so water distributes evenly, which naturally prevents early weed growth. If rain is delayed, begin pumping water to maintain strict soil saturation before broadcasting seeds.", 
+            "Vegetative": "Your crop is in the active tillering phase, meaning it requires a continuous standing water level of 3 to 5 cm. This suppresses competing weeds and regulates soil temperature for healthy root development. Do not let the field dry out completely, as moisture stress will permanently stunt growth and reduce the final panicle count.", 
+            "Flowering": "The crop has entered the highly sensitive reproductive stage where delicate pollination occurs. Heavy rainfall or high winds right now can wash away pollen and cause severe grain blanking (empty husks). If severe weather hits, halt any planned chemical spraying immediately, as it will just wash off and waste your investment.", 
+            "Pre-Harvest": "It is absolutely critical to drain the field completely right now to allow the soil to harden before harvest machinery enters. Any standing water or unexpected rain at this stage will cause the mature grains to sprout on the panicle or shatter. Keep a close eye on the forecast and harvest immediately if a major storm approaches."
+        }
     },
     "Maize (మొక్కజొన్న)": {
         "moisture_optimum": [0.50, 0.70], "rain_max": 50, "wind_max": 50,
         "threats": {"flood": "Root Asphyxiation", "drought": "Silking Abortion", "wind": "Stalk Breakage"},
-        "advice": {"Sowing": "Drain field to prevent seed rot.", "Vegetative": "Moderate rain supports stalks.", "Flowering": "CRITICAL: Drought causes yield failure.", "Pre-Harvest": "Needs dry weather for cobs."}
+        "advice": {
+            "Sowing": "Maize seeds are highly susceptible to rotting if left sitting in cold, waterlogged soil. Ensure your field has proper drainage channels open before planting to let excess rain escape. The ideal soil should feel moist but crumble easily in your hand when forming rows.", 
+            "Vegetative": "The plant is rapidly building its thick stalk and broad leaves, requiring balanced moisture but zero standing water. Apply your nitrogen top-dressing carefully right before a light rain, so the nutrients wash directly into the root zone. If heavy gales are forecasted, monitor the field edges for early stalk snapping.", 
+            "Flowering": "This is the most critical stage of maize farming: silking and tasseling. Even a brief period of drought or severe heat right now will abort the kernels and cause half-empty cobs. Turn on your micro-irrigation immediately if the soil moisture drops below 40%, and protect the tassels from extreme wind.", 
+            "Pre-Harvest": "The cobs are actively drying down and hardening in the field to reach the ideal moisture percentage. Heavy late-season rain can introduce cob rot and dangerous fungal toxins (aflatoxin). If consistent rain is in the forecast, consider an early harvest and use artificial grain dryers to save the crop."
+        }
     },
     "Cotton (పత్తి)": {
         "moisture_optimum": [0.35, 0.60], "rain_max": 30, "wind_max": 45,
         "threats": {"flood": "Boll Shedding", "drought": "Stunting", "wind": "Branch Breakage"},
-        "advice": {"Sowing": "Heavy rain traps seedlings.", "Vegetative": "Deep roots tolerate drought.", "Flowering": "Rain washes away pollen.", "Pre-Harvest": "CRITICAL: Rain discolors lint."}
+        "advice": {
+            "Sowing": "Cotton seedlings are weak pushers and struggle to break through soil that has been compacted by heavy rain. Plant your seeds at a shallow depth and avoid over-watering the beds. If a heavy downpour crusts the topsoil, you may need to manually break the crust to allow seedlings to emerge.", 
+            "Vegetative": "Cotton naturally develops a deep taproot, making it highly tolerant to mild drought conditions compared to other crops. Do not over-irrigate during this phase, as excessive water forces the plant to grow too tall and leafy at the expense of fruiting branches. Maintain moderate moisture to encourage deep root digging.", 
+            "Flowering": "The plant is now producing squares (flower buds), which are extremely sensitive to sudden environmental shocks. A sudden shift from dry to flooded soil, or a heavy rainstorm, will cause the plant to aggressively shed its squares and young bolls. Keep soil moisture strictly consistent and apply potassium to strengthen boll retention.", 
+            "Pre-Harvest": "The cotton bolls are cracking open and exposing the valuable white lint to the open air. Rain at this stage is catastrophic, as it severely discolors the lint, drops its market grade, and triggers boll rot. Accelerate your picking schedule if dark clouds gather, prioritizing the fully open bolls first."
+        }
     },
     "Banana (అరటి)": {
         "moisture_optimum": [0.70, 0.90], "rain_max": 100, "wind_max": 30, 
         "threats": {"flood": "Panama Wilt Risk", "drought": "Leaf Scorch", "wind": "CRITICAL Uprooting Threat"},
-        "advice": {"Sowing": "Maintain high soil moisture.", "Vegetative": "Wind above 30km/h tears leaves.", "Flowering": "High moisture needed.", "Pre-Harvest": "Prop up pseudostems immediately."}
+        "advice": {
+            "Sowing": "Banana tissue culture saplings require an environment with high humidity and deeply saturated, yet well-drained soil. Ensure your planting pits have adequate organic manure and do not allow water to stagnate around the delicate newly formed roots. Apply a light organic mulch around the base to lock in critical moisture.", 
+            "Vegetative": "Banana plants are 80% water and possess massive, broad leaves that tear easily in winds exceeding just 30 km/h. Maintain heavy, consistent irrigation schedules, especially during high-temperature afternoons. If the wind speed picks up, the shredded leaves will reduce photosynthesis and delay your harvest timeline.", 
+            "Flowering": "The plant is expending massive energy to push out the heavy flower bunch (inflorescence). Do not allow the soil to dry out even slightly, as moisture stress will cause the emerging fruits to choke and deform. This is the exact time to apply a heavy dose of potassium to ensure large, uniform fruit fingers.", 
+            "Pre-Harvest": "The mature banana bunches have made the plants extremely top-heavy and structurally unstable. You are at critical risk of wind lodging, where a single strong gust can uproot the entire plant and destroy the fruit. Immediately install strong bamboo props (casuarina poles) against the pseudostem to brace against incoming winds."
+        }
     },
     "Mango (మామిడి)": {
         "moisture_optimum": [0.30, 0.60], "rain_max": 60, "wind_max": 50,
         "threats": {"flood": "Fungal Rot", "drought": "Fruit Drop", "wind": "Fruit Drop"},
-        "advice": {"Sowing": "Saplings need moderate watering.", "Vegetative": "Drought tolerant deep roots.", "Flowering": "CRITICAL DANGER: Rain washes flowers.", "Pre-Harvest": "Heavy wind causes fruit drop."}
+        "advice": {
+            "Sowing": "Young mango saplings have fragile root systems that require gentle, deep watering every few days. Do not plant them in low-lying areas where monsoon water pools, as waterlogging will quickly suffocate the taproot. Secure the young grafted stem to a support stick to prevent wind damage.", 
+            "Vegetative": "Mature mango trees have extensive, deep-seeking roots and are highly tolerant to long dry spells. Over-watering during the vegetative stage actually hurts the tree by promoting excessive leaf flushing instead of preparing for flowers. Withhold irrigation for a few weeks to trigger the necessary stress that induces blooming.", 
+            "Flowering": "This is the most precarious stage for mangoes, as the delicate panicles are fully exposed. Unexpected rain or heavy fog will violently wash away the flowers, prevent insect pollination, and immediately trigger Powdery Mildew fungus. If rain occurs, spray a recommended preventative fungicide the very next clear morning.", 
+            "Pre-Harvest": "The fruits are sizing up and gaining weight, making their stems highly vulnerable to mechanical stress. Heavy winds and rainstorms will whip the branches and cause severe, premature fruit drop, ruining your marketable yield. Monitor local wind alerts closely and consider harvesting mature, green fruits slightly early if a cyclone threatens."
+        }
     },
     "Chilli (మిరప)": {
         "moisture_optimum": [0.45, 0.65], "rain_max": 40, "wind_max": 40,
         "threats": {"flood": "Collar Rot", "drought": "Flower Drop", "wind": "Plant Snapping"},
-        "advice": {"Sowing": "Nursery beds need misting.", "Vegetative": "Waterlogging causes root rot.", "Flowering": "Moisture stress drops blossoms.", "Pre-Harvest": "Dry weather maintains pungency."}
+        "advice": {
+            "Sowing": "Chilli seeds in the nursery bed require a fine, gentle misting rather than a heavy soaking. Heavy, direct rainfall will wash the seeds completely out of the raised beds and ruin the germination rate. Protect the nursery beds with a temporary shade net to break the impact of heavy raindrops and extreme afternoon sun.", 
+            "Vegetative": "Chilli roots are highly sensitive to standing water, which immediately invites Collar Rot and Fusarium wilt. Ensure your field is designed with high ridges and deep furrows so excess water drains instantly. Apply nitrogen carefully to promote bushy branching without making the plant too soft and susceptible to pests.", 
+            "Flowering": "The plant is now setting its white blossoms, but it will rapidly drop them if it experiences sudden environmental stress. Both extreme dry soil and sudden waterlogging will cause blossom drop, leading to bare branches with no chillies. Maintain a very light, consistent moisture level and avoid aggressive overhead irrigation.", 
+            "Pre-Harvest": "The chillies are currently ripening and turning deep red, a process that strictly requires hot, dry weather to build capsaicin (pungency). Any rainfall right now will cause the mature pods to absorb water, split open, and rot on the branch before you can pick them. Harvest ripe pods immediately before any forecasted showers."
+        }
     }
 }
 
@@ -149,7 +183,6 @@ if st.session_state.current_page == "Intake":
         st.write("")
         if st.button(T['launch_btn'], type="primary", use_container_width=True):
             if st.session_state.farmer_name:
-                # INSTANT API FETCH: Saved strictly to memory, no local JSON files
                 st.session_state.live_data = fetch_live_data(st.session_state.city)
                 navigate_to("Dashboard")
                 st.rerun()
@@ -179,7 +212,6 @@ elif st.session_state.current_page == "Dashboard":
         st.caption(f"🌾 {crop} — **{st.session_state.stage_display}**")
     with col_h2:
         if st.button("🔄 Sync API", use_container_width=True):
-            # FRESH DATA FETCH ON BUTTON PRESS
             st.session_state.live_data = fetch_live_data(st.session_state.city)
             st.rerun()
     with col_h3:
@@ -259,6 +291,7 @@ elif st.session_state.current_page == "Dashboard":
     
     with st.container(border=True):
         st.markdown(f"**💡 AI Diagnostic Insight ({st.session_state.stage_display}):**")
+        # NEW: Prints the deeply detailed 3-to-4 sentence agronomic advice block
         st.write(rules['advice'][stage])
     st.divider()
 
@@ -272,3 +305,16 @@ elif st.session_state.current_page == "Dashboard":
     with c_soil2:
         chart_df = pd.DataFrame({"Level": [soil['N'], soil['P'], soil['K']]}, index=["N", "P", "K"])
         st.bar_chart(chart_df, height=200)
+
+    # --- NEW: GOVERNMENT EMERGENCY NUMBERS ---
+    st.divider()
+    st.markdown(f"### {T['sos_header']}")
+    sos1, sos2, sos3, sos4 = st.columns(4)
+    with sos1:
+        st.error("**🚑 Medical / Rescue**\n\nCall **108** or **112**")
+    with sos2:
+        st.warning("**🌾 Kisan Call Centre**\n\nCall **1800-180-1551**")
+    with sos3:
+        st.info("**⛈️ Disaster Auth. (NDMA)**\n\nCall **1078**")
+    with sos4:
+        st.success("**📞 AP Rythu Bharosa**\n\nCall **155251**")
